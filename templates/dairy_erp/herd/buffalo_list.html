@@ -1,0 +1,128 @@
+{% extends 'dairy_erp/base.html' %}
+
+{% block title %}Buffalo Management{% endblock %}
+
+{% block header %}Buffalo Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total Buffalo</h5>
+                <h2 class="display-4">{{ total_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Milking</h5>
+                <h2 class="display-4">{{ milking_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Pregnant</h5>
+                <h2 class="display-4">{{ pregnant_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Dry</h5>
+                <h2 class="display-4">{{ dry_count }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Buffalo List</h5>
+        <a href="{% url 'herd:buffalo_add' %}" class="btn btn-primary btn-sm">Add Buffalo</a>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <form method="get" class="row g-3">
+                    <div class="col-md-5">
+                        <label for="status" class="form-label">Status</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">All</option>
+                            {% for value, display in status_choices %}
+                                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label for="breed" class="form-label">Breed</label>
+                        <select name="breed" id="breed" class="form-select">
+                            <option value="">All</option>
+                            {% for breed in breeds %}
+                                <option value="{{ breed.id }}" {% if breed_filter == breed.id|stringformat:"i" %}selected{% endif %}>{{ breed.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-secondary w-100">Filter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Breed</th>
+                        <th>Status</th>
+                        <th>Age</th>
+                        <th>Lactation #</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for buffalo in buffaloes %}
+                    <tr>
+                        <td>{{ buffalo.buffalo_id }}</td>
+                        <td>{{ buffalo.name|default:"-" }}</td>
+                        <td>{{ buffalo.breed.name }}</td>
+                        <td>
+                            {% if buffalo.status == 'MILKING' %}
+                                <span class="badge bg-success">{{ buffalo.get_status_display }}</span>
+                            {% elif buffalo.status == 'PREGNANT' %}
+                                <span class="badge bg-primary">{{ buffalo.get_status_display }}</span>
+                            {% elif buffalo.status == 'DRY' %}
+                                <span class="badge bg-warning text-dark">{{ buffalo.get_status_display }}</span>
+                            {% elif buffalo.status == 'SOLD' or buffalo.status == 'DECEASED' %}
+                                <span class="badge bg-danger">{{ buffalo.get_status_display }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ buffalo.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ buffalo.age }}</td>
+                        <td>{{ buffalo.lactation_number }}</td>
+                        <td>
+                            <a href="{% url 'herd:buffalo_detail' buffalo_id=buffalo.id %}" class="btn btn-info btn-sm">View</a>
+                            <a href="{% url 'herd:buffalo_edit' buffalo_id=buffalo.id %}" class="btn btn-warning btn-sm">Edit</a>
+                            <a href="{% url 'herd:buffalo_delete' buffalo_id=buffalo.id %}" class="btn btn-danger btn-sm">Remove</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No buffalo records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

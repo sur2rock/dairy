@@ -1,0 +1,63 @@
+{% extends 'dairy_erp/base.html' %}
+
+{% block title %}Delete Expense{% endblock %}
+
+{% block header %}Delete Expense{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Confirm Deletion</h5>
+            </div>
+            <div class="card-body">
+                <p>Are you sure you want to delete the following expense record?</p>
+                
+                <table class="table">
+                    <tr>
+                        <th style="width: 30%">Date:</th>
+                        <td>{{ expense.date }}</td>
+                    </tr>
+                    <tr>
+                        <th>Category:</th>
+                        <td>{{ expense.category.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Description:</th>
+                        <td>{{ expense.description }}</td>
+                    </tr>
+                    <tr>
+                        <th>Amount:</th>
+                        <td>{{ expense.amount }}</td>
+                    </tr>
+                    {% if expense.supplier_vendor %}
+                    <tr>
+                        <th>Supplier/Vendor:</th>
+                        <td>{{ expense.supplier_vendor }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if expense.related_buffalo %}
+                    <tr>
+                        <th>Related Buffalo:</th>
+                        <td>{{ expense.related_buffalo }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+                
+                <div class="alert alert-danger">
+                    <strong>Warning:</strong> This action cannot be undone. If this expense is related to a buffalo, deleting it will not automatically update the buffalo's cumulative cost.
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'finance:expense_list' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

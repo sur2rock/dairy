@@ -1,0 +1,171 @@
+{% extends "layout.html" %}
+
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if form.instance.id %}Edit{% else %}Add{% endif %} Fodder Type{% endblock %}
+
+{% block content %}
+<div class="row mb-2">
+    <div class="col-sm-6">
+        <h2>{% if form.instance.id %}Edit{% else %}Add{% endif %} Fodder Type</h2>
+    </div>
+    <div class="col-sm-6">
+        <div class="float-right">
+            <a href="{% url 'fodder_type_list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to List</a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-edit"></i>
+        Fodder Type Information
+    </div>
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-info-circle"></i>
+                            Basic Information
+                        </div>
+                        <div class="card-body">
+                            {{ form.name|as_crispy_field }}
+                            {{ form.description|as_crispy_field }}
+                            {{ form.category|as_crispy_field }}
+                            {{ form.supplier|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-dollar-sign"></i>
+                            Cost & Measurement
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.cost_per_unit|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.unit_of_measure|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.reorder_level|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.ideal_stock_level|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-chart-pie"></i>
+                            Nutritional Information
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.dry_matter_percentage|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.protein_percentage|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.fiber_percentage|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.energy_content|as_crispy_field }}
+                                </div>
+                            </div>
+                            {{ form.feeding_recommendations|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="fas fa-warehouse"></i>
+                            Storage Information
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.shelf_life_days|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.storage_conditions|as_crispy_field }}
+                                </div>
+                            </div>
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {% if form.instance.id %}Update{% else %}Save{% endif %} Fodder Type
+                    </button>
+                    {% if form.instance.id %}
+                    <a href="{% url 'fodder_type_detail' form.instance.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    {% else %}
+                    <a href="{% url 'fodder_type_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Form validation logic can be added here
+
+    // Show warning if nutritional values exceed 100%
+    function checkNutritionalValues() {
+        var dryMatter = parseFloat($('#id_dry_matter_percentage').val()) || 0;
+        var protein = parseFloat($('#id_protein_percentage').val()) || 0;
+        var fiber = parseFloat($('#id_fiber_percentage').val()) || 0;
+
+        var total = dryMatter + protein + fiber;
+
+        if (total > 100) {
+            if (!$('#nutrition_warning').length) {
+                $('<div id="nutrition_warning" class="alert alert-warning mt-3">' +
+                  '<i class="fas fa-exclamation-triangle"></i> ' +
+                  'Warning: The sum of nutritional values exceeds 100%. Please verify your inputs.' +
+                  '</div>').insertAfter('#id_fiber_percentage').closest('.form-group');
+            }
+        } else {
+            $('#nutrition_warning').remove();
+        }
+    }
+
+    $('#id_dry_matter_percentage, #id_protein_percentage, #id_fiber_percentage').change(checkNutritionalValues);
+
+    // Initialize form with appropriate category default
+    var categoryField = $('#id_category');
+    if (categoryField.val() === '') {
+        categoryField.val('roughage');  // Default to roughage if no category selected
+    }
+});
+</script>
+{% endblock %}

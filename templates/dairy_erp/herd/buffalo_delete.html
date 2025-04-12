@@ -1,0 +1,48 @@
+{% extends 'dairy_erp/base.html' %}
+
+{% block title %}Remove Buffalo{% endblock %}
+
+{% block header %}Remove Buffalo: {{ buffalo }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Confirm Removal</h5>
+            </div>
+            <div class="card-body">
+                <p>Are you sure you want to remove <strong>{{ buffalo }}</strong> from the active inventory?</p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="event_type" class="form-label">Reason</label>
+                        <select name="event_type" id="event_type" class="form-select" required>
+                            <option value="">-- Select Reason --</option>
+                            <option value="SALE">Sale</option>
+                            <option value="DEATH">Death</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="event_date" class="form-label">Date</label>
+                        <input type="date" name="event_date" id="event_date" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea name="notes" id="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'herd:buffalo_detail' buffalo_id=buffalo.id %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Confirm Removal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

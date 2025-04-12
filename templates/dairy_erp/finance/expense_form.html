@@ -1,0 +1,126 @@
+{% extends 'dairy_erp/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Expense Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.date.id_for_label }}" class="form-label">Date *</label>
+                                {{ form.date }}
+                                {% if form.date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.date.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">Category *</label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.category.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">Description *</label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.description.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.amount.id_for_label }}" class="form-label">Amount *</label>
+                                {{ form.amount }}
+                                {% if form.amount.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.amount.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.supplier_vendor.id_for_label }}" class="form-label">Supplier/Vendor</label>
+                                {{ form.supplier_vendor }}
+                                {% if form.supplier_vendor.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.supplier_vendor.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.related_buffalo.id_for_label }}" class="form-label">Related Buffalo</label>
+                                {{ form.related_buffalo }}
+                                {% if form.related_buffalo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.related_buffalo.errors }}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Select if this expense is for a specific buffalo.</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                                {{ form.notes }}
+                                {% if form.notes.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.notes.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Custom Fields -->
+                    {% load herd_extras %}
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h5 class="mb-3">Custom Fields</h5>
+                        </div>
+                        
+                        {% for field in form %}
+                            {% if field.name|startswith:'custom_' %}
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ field.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'finance:expense_list' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,238 @@
+{% extends "layout.html" %}
+
+{% load static %}
+{% load humanize %}
+
+{% block title %}Fodder Types{% endblock %}
+
+{% block content %}
+<div class="row mb-2">
+    <div class="col-sm-6">
+        <h2>Fodder Types</h2>
+    </div>
+    <div class="col-sm-6">
+        <div class="float-right">
+            <a href="{% url 'fodder_type_create' %}" class="btn btn-success"><i class="fas fa-plus"></i> Add New Fodder Type</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary"><i class="fas fa-home"></i> Dashboard</a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-table"></i>
+        Fodder Types List
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="fodderTypesTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Cost</th>
+                        <th>Current Stock</th>
+                        <th>Status</th>
+                        <th>Protein %</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fodder_type in fodder_types %}
+                    <tr>
+                        <td>{{ fodder_type.name }}</td>
+                        <td>{{ fodder_type.get_category_display }}</td>
+                        <td>{{ fodder_type.cost_per_unit|floatformat:2 }} {{ farm_settings.currency_symbol }}/{{ fodder_type.get_unit_of_measure_display }}</td>
+                        <td>{{ fodder_type.current_stock|floatformat:2 }} {{ fodder_type.get_unit_of_measure_display }}</td>
+                        <td>
+                            {% if fodder_type.current_stock < fodder_type.reorder_level %}
+                                <span class="badge badge-danger">Low Stock</span>
+                            {% elif fodder_type.current_stock < fodder_type.ideal_stock_level %}
+                                <span class="badge badge-warning">Stock OK</span>
+                            {% else %}
+                                <span class="badge badge-success">Good Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ fodder_type.protein_percentage|default:"N/A" }}%</td>
+                        <td>{{ fodder_type.updated_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'fodder_type_detail' fodder_type.id %}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                <a href="{% url 'fodder_type_edit' fodder_type.id %}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a>
+                                <a href="{% url 'fodder_type_delete' fodder_type.id %}" class="btn btn-sm btn-danger delete-btn" data-id="{{ fodder_type.id }}" data-name="{{ fodder_type.name }}"><i class="fas fa-trash"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">No fodder types found. <a href="{% url 'fodder_type_create' %}">Add your first fodder type</a>.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-chart-pie"></i>
+                Fodder Types by Category
+            </div>
+            <div class="card-body">
+                <canvas id="fodderCategoriesChart" width="100%" height="50"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-chart-bar"></i>
+                Top 5 Fodder Types by Value
+            </div>
+            <div class="card-body">
+                <canvas id="fodderValueChart" width="100%" height="50"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the fodder type "<span id="deleteItemName"></span>"?</p>
+                <p class="text-danger">This action cannot be undone. All related inventory transactions will remain but will be marked as orphaned.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <a href="#" id="confirmDeleteBtn" class="btn btn-danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#fodderTypesTable').DataTable({
+        order: [[0, 'asc']],
+       pageLength: 10,
+       language: {
+           searchPlaceholder: "Search fodder types"
+       }
+   });
+
+   // Handle delete button
+   $('.delete-btn').click(function(e) {
+       e.preventDefault();
+       var id = $(this).data('id');
+       var name = $(this).data('name');
+       $('#deleteItemName').text(name);
+       $('#confirmDeleteBtn').attr('href', "{% url 'fodder_type_delete' 0 %}".replace('0', id) + "?confirm=yes");
+       $('#deleteModal').modal('show');
+   });
+
+   // Fodder Categories Chart
+   var categoriesCtx = document.getElementById('fodderCategoriesChart').getContext('2d');
+   var fodderCategoriesChart = new Chart(categoriesCtx, {
+       type: 'pie',
+       data: {
+           labels: [{% for category in category_counts %}'{{ category.category_display }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+           datasets: [{
+               data: [{% for category in category_counts %}{{ category.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+               backgroundColor: [
+                   'rgba(255, 99, 132, 0.7)',
+                   'rgba(54, 162, 235, 0.7)',
+                   'rgba(255, 206, 86, 0.7)',
+                   'rgba(75, 192, 192, 0.7)',
+                   'rgba(153, 102, 255, 0.7)',
+                   'rgba(255, 159, 64, 0.7)'
+               ],
+               borderColor: [
+                   'rgba(255, 99, 132, 1)',
+                   'rgba(54, 162, 235, 1)',
+                   'rgba(255, 206, 86, 1)',
+                   'rgba(75, 192, 192, 1)',
+                   'rgba(153, 102, 255, 1)',
+                   'rgba(255, 159, 64, 1)'
+               ],
+               borderWidth: 1
+           }]
+       },
+       options: {
+           responsive: true,
+           legend: {
+               position: 'right',
+           },
+           tooltips: {
+               callbacks: {
+                   label: function(tooltipItem, data) {
+                       var dataset = data.datasets[tooltipItem.datasetIndex];
+                       var total = dataset.data.reduce(function(previousValue, currentValue) {
+                           return previousValue + currentValue;
+                       });
+                       var currentValue = dataset.data[tooltipItem.index];
+                       var percentage = Math.round((currentValue/total) * 100);
+                       return data.labels[tooltipItem.index] + ': ' + currentValue + ' (' + percentage + '%)';
+                   }
+               }
+           }
+       }
+   });
+
+   // Top Fodder by Value Chart
+   var valueCtx = document.getElementById('fodderValueChart').getContext('2d');
+   var fodderValueChart = new Chart(valueCtx, {
+       type: 'horizontalBar',
+       data: {
+           labels: [{% for item in top_value_fodders %}'{{ item.name }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+           datasets: [{
+               label: 'Inventory Value ({{ farm_settings.currency_symbol }})',
+               data: [{% for item in top_value_fodders %}{{ item.inventory_value }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+               backgroundColor: 'rgba(75, 192, 192, 0.7)',
+               borderColor: 'rgba(75, 192, 192, 1)',
+               borderWidth: 1
+           }]
+       },
+       options: {
+           scales: {
+               xAxes: [{
+                   ticks: {
+                       beginAtZero: true,
+                       callback: function(value) {
+                           return '{{ farm_settings.currency_symbol }}' + value.toLocaleString();
+                       }
+                   }
+               }]
+           },
+           tooltips: {
+               callbacks: {
+                   label: function(tooltipItem, data) {
+                       var label = data.datasets[tooltipItem.datasetIndex].label || '';
+                       if (label) {
+                           label += ': ';
+                       }
+                       label += '{{ farm_settings.currency_symbol }}' + tooltipItem.xLabel.toLocaleString();
+                       return label;
+                   }
+               }
+           }
+       }
+   });
+});
+</script>
+{% endblock %}

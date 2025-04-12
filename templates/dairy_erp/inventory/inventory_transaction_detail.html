@@ -1,0 +1,391 @@
+{% extends "layout.html" %}
+
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="row mb-2">
+    <div class="col-sm-6">
+        <h2>Inventory Transaction #{{ transaction.id }}</h2>
+    </div>
+    <div class="col-sm-6">
+        <div class="float-right">
+            <a href="{% url 'inventory_transaction_edit' transaction.id %}" class="btn btn-primary"><i class="fas fa-edit"></i> Edit</a>
+            <a href="{% url 'inventory_transaction_delete' transaction.id %}" class="btn btn-danger delete-btn"><i class="fas fa-trash"></i> Delete</a>
+            <a href="{% url 'inventory_transaction_list' %}" class="btn btn-secondary"><i class="fas fa-list"></i> Back to List</a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-info-circle"></i>
+        Transaction Details
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 150px;">Transaction ID</th>
+                            <td>#{{ transaction.id }}</td>
+                        </tr>
+                        <tr>
+                            <th>Transaction Type</th>
+                            <td>
+                                {% if transaction.transaction_type == 'purchase' %}
+                                    <span class="badge badge-success">Purchase</span>
+                                {% elif transaction.transaction_type == 'consumption' %}
+                                    <span class="badge badge-warning">Consumption</span>
+                                {% elif transaction.transaction_type == 'adjustment' %}
+                                    <span class="badge badge-info">Adjustment</span>
+                                {% elif transaction.transaction_type == 'expiry' %}
+                                    <span class="badge badge-danger">Expiry</span>
+                                {% elif transaction.transaction_type == 'transfer' %}
+                                    <span class="badge badge-primary">Transfer</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ transaction.transaction_type|title }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Transaction Date</th>
+                            <td>{{ transaction.transaction_date|date:"F d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Fodder Type</th>
+                            <td>
+                                {% if transaction.fodder_type %}
+                                    <a href="{% url 'fodder_type_detail' transaction.fodder_type.id %}">{{ transaction.fodder_type.name }}</a>
+                                {% else %}
+                                    <em class="text-muted">Deleted fodder type</em>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Quantity</th>
+                            <td>
+                                {% if transaction.transaction_type == 'consumption' or transaction.transaction_type == 'expiry' %}
+                                    -{{ transaction.quantity|floatformat:2 }}
+                                {% else %}
+                                    {{ transaction.quantity|floatformat:2 }}
+                                {% endif %}
+                                {% if transaction.fodder_type %}
+                                    {{ transaction.fodder_type.get_unit_of_measure_display }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 150px;">Cost</th>
+                            <td>
+                                {% if transaction.cost %}
+                                    {{ transaction.cost|floatformat:2 }} {{ farm_settings.currency_symbol }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Remaining Stock</th>
+                            <td>{{ transaction.remaining_stock|floatformat:2 }} 
+                                {% if transaction.fodder_type %}
+                                    {{ transaction.fodder_type.get_unit_of_measure_display }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Reference Number</th>
+                            <td>{{ transaction.reference_number|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Created By</th>
+                            <td>{{ transaction.created_by.get_full_name|default:transaction.created_by.username }}</td>
+                        </tr>
+                        <tr>
+                            <th>Created</th>
+                            <td>{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Updated</th>
+                            <td>{{ transaction.updated_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-sticky-note"></i> Notes
+                    </div>
+                    <div class="card-body">
+                        {% if transaction.notes %}
+                            {{ transaction.notes|linebreaks }}
+                        {% else %}
+                            <em class="text-muted">No notes provided for this transaction.</em>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if transaction.transaction_type == 'purchase' %}
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-truck"></i>
+        Purchase Details
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 150px;">Supplier</th>
+                            <td>
+                                {% if transaction.supplier %}
+                                    <a href="{% url 'supplier_detail' transaction.supplier.id %}">{{ transaction.supplier.name }}</a>
+                                {% else %}
+                                    {{ transaction.supplier_name|default:"N/A" }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Invoice Number</th>
+                            <td>{{ transaction.invoice_number|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Payment Status</th>
+                            <td>
+                                {% if transaction.payment_status == 'paid' %}
+                                    <span class="badge badge-success">Paid</span>
+                                {% elif transaction.payment_status == 'partial' %}
+                                    <span class="badge badge-warning">Partially Paid</span>
+                                {% elif transaction.payment_status == 'pending' %}
+                                    <span class="badge badge-danger">Pending</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ transaction.payment_status|default:"N/A"|title }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 150px;">Unit Cost</th>
+                            <td>
+                                {% if transaction.cost and transaction.quantity %}
+                                    {{ transaction.cost|divide:transaction.quantity|floatformat:2 }} {{ farm_settings.currency_symbol }}/
+                                    {% if transaction.fodder_type %}
+                                        {{ transaction.fodder_type.get_unit_of_measure_display }}
+                                    {% endif %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Delivery Date</th>
+                            <td>{{ transaction.delivery_date|date:"F d, Y"|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Expiry Date</th>
+                            <td>
+                                {% if transaction.expiry_date %}
+                                    {{ transaction.expiry_date|date:"F d, Y" }}
+                                    {% if transaction.expiry_date < today_date %}
+                                        <span class="badge badge-danger">Expired</span>
+                                    {% elif transaction.expiry_date < expiry_warning_date %}
+                                        <span class="badge badge-warning">Expiring Soon</span>
+                                    {% endif %}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if transaction.transaction_type == 'consumption' %}
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-utensils"></i>
+        Consumption Details
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 150px;">Animal Group</th>
+                            <td>
+                                {% if transaction.animal_group %}
+                                    <a href="{% url 'animal_group_detail' transaction.animal_group.id %}">{{ transaction.animal_group.name }}</a>
+                                {% else %}
+                                    {{ transaction.animal_group_name|default:"N/A" }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Purpose</th>
+                            <td>{{ transaction.consumption_purpose|default:"N/A" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 150px;">Cost Value</th>
+                            <td>
+                                {% if transaction.cost %}
+                                    {{ transaction.cost|floatformat:2 }} {{ farm_settings.currency_symbol }}
+                                {% else %}
+                                    {{ transaction.quantity|floatformat:2|multiply:transaction.fodder_type.cost_per_unit|floatformat:2 }} {{ farm_settings.currency_symbol }}
+                                    <small class="text-muted">(estimated)</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Feeding Schedule</th>
+                            <td>{{ transaction.get_feeding_schedule_display|default:"N/A" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if related_transactions %}
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-link"></i>
+        Related Transactions
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="relatedTransactionsTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Fodder Type</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rel_transaction in related_transactions %}
+                    <tr>
+                        <td>#{{ rel_transaction.id }}</td>
+                        <td>{{ rel_transaction.transaction_date|date:"M d, Y" }}</td>
+                        <td>
+                            {% if rel_transaction.transaction_type == 'purchase' %}
+                                <span class="badge badge-success">Purchase</span>
+                            {% elif rel_transaction.transaction_type == 'consumption' %}
+                                <span class="badge badge-warning">Consumption</span>
+                            {% elif rel_transaction.transaction_type == 'adjustment' %}
+                                <span class="badge badge-info">Adjustment</span>
+                            {% elif rel_transaction.transaction_type == 'expiry' %}
+                                <span class="badge badge-danger">Expiry</span>
+                            {% elif rel_transaction.transaction_type == 'transfer' %}
+                                <span class="badge badge-primary">Transfer</span>
+                            {% else %}
+                                <span class="badge badge-secondary">{{ rel_transaction.transaction_type|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if rel_transaction.transaction_type == 'consumption' or rel_transaction.transaction_type == 'expiry' %}
+                                -{{ rel_transaction.quantity|floatformat:2 }}
+                            {% else %}
+                                {{ rel_transaction.quantity|floatformat:2 }}
+                            {% endif %}
+                            {% if rel_transaction.fodder_type %}
+                                {{ rel_transaction.fodder_type.get_unit_of_measure_display }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if rel_transaction.fodder_type %}
+                                <a href="{% url 'fodder_type_detail' rel_transaction.fodder_type.id %}">{{ rel_transaction.fodder_type.name }}</a>
+                            {% else %}
+                                <em class="text-muted">Deleted fodder type</em>
+                            {% endif %}
+                        </td>
+                        <td>{{ rel_transaction.notes|truncatewords:10|default:"" }}</td>
+                        <td>
+                            <a href="{% url 'inventory_transaction_detail' rel_transaction.id %}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                        </td>
+                    </tr>
+                                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this inventory transaction?</p>
+                <p class="text-danger">This action cannot be undone and will affect your inventory levels. If this is a purchase, consumption, or adjustment, it may cause discrepancies in your stock records.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <a href="{% url 'inventory_transaction_delete' transaction.id %}?confirm=yes" class="btn btn-danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize DataTable for related transactions
+    $('#relatedTransactionsTable').DataTable({
+        order: [[1, 'desc']],
+        pageLength: 5,
+        lengthMenu: [[5, 10, 25, -1], [5, 10, 25, "All"]]
+    });
+    
+    // Handle delete button
+    $('.delete-btn').click(function(e) {
+        e.preventDefault();
+        $('#deleteModal').modal('show');
+    });
+});
+</script>
+{% endblock %}

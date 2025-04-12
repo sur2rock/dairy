@@ -1,0 +1,159 @@
+{% extends 'dairy_erp/base.html' %}
+
+{% block title %}Income{% endblock %}
+
+{% block header %}Income{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total Income</h5>
+                <h2 class="display-4">{{ total_income|floatformat:2 }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Income Breakdown</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="incomeBreakdownChart" style="height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Income Records</h5>
+        <div>
+            <a href="{% url 'finance:milk_income_generator' %}" class="btn btn-success btn-sm">Generate Milk Income</a>
+            <a href="{% url 'finance:income_add' %}" class="btn btn-primary btn-sm">Add Income</a>
+            <a href="{% url 'finance:export_income' %}?start_date={{ start_date }}&end_date={{ end_date }}&category_id={{ category_id }}" class="btn btn-secondary btn-sm">Export CSV</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="category_id" class="form-label">Category</label>
+                        <select name="category_id" id="category_id" class="form-select">
+                            <option value="">All</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if category_id == category.id|stringformat:"i" %}selected{% endif %}>{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-secondary w-100">Filter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total Amount</th>
+                        <th>Customer</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for income in income_records %}
+                    <tr>
+                        <td>{{ income.date }}</td>
+                        <td>
+                            <span class="badge bg-success">{{ income.category.name }}</span>
+                        </td>
+                        <td>{{ income.description }}</td>
+                        <td>{{ income.quantity|default:"-" }}</td>
+                        <td>{{ income.unit_price|default:"-" }}</td>
+                        <td>{{ income.total_amount }}</td>
+                        <td>{{ income.customer|default:"-" }}</td>
+                        <td>
+                            <a href="{% url 'finance:income_edit' income_id=income.id %}" class="btn btn-warning btn-sm">Edit</a>
+                            <a href="{% url 'finance:income_delete' income_id=income.id %}" class="btn btn-danger btn-sm">Delete</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">No income records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Income Breakdown Chart
+        const incomeBreakdownCtx = document.getElementById('incomeBreakdownChart').getContext('2d');
+        const incomeBreakdownChart = new Chart(incomeBreakdownCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ chart_labels|safe }},
+                datasets: [{
+                    data: {{ chart_values|safe }},
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.5)',
+                        'rgba(54, 162, 235, 0.5)',
+                        'rgba(255, 206, 86, 0.5)',
+                        'rgba(255, 99, 132, 0.5)',
+                        'rgba(153, 102, 255, 0.5)',
+                        'rgba(255, 159, 64, 0.5)',
+                        'rgba(199, 199, 199, 0.5)',
+                        'rgba(83, 102, 255, 0.5)',
+                        'rgba(40, 159, 150, 0.5)',
+                        'rgba(210, 105, 30, 0.5)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

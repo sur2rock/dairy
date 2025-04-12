@@ -1,0 +1,137 @@
+{% extends 'dairy_erp/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block header %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- KPI Cards -->
+    <div class="col-md-3 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total Buffalo</h5>
+                <h2 class="display-4">{{ total_buffalo }}</h2>
+                <a href="{% url 'herd:buffalo_list' %}" class="btn btn-sm btn-outline-primary mt-2">View All</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Milking Buffalo</h5>
+                <h2 class="display-4">{{ milking_buffalo }}</h2>
+                <a href="{% url 'herd:buffalo_list' %}?status=MILKING" class="btn btn-sm btn-outline-success mt-2">View</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Avg. Milk Yield (7d)</h5>
+                <h2 class="display-4">{{ avg_milk_per_day|floatformat:1 }} L</h2>
+                <a href="{% url 'herd:milk_production_list' %}" class="btn btn-sm btn-outline-info mt-2">View Records</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Pregnant Buffalo</h5>
+                <h2 class="display-4">{{ pregnant_buffalo }}</h2>
+                <a href="{% url 'herd:buffalo_list' %}?status=PREGNANT" class="btn btn-sm btn-outline-primary mt-2">View</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Charts -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                Milk Yield Trend (Last 7 Days)
+            </div>
+            <div class="card-body">
+                <canvas id="milkYieldChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                Buffalo Status Distribution
+            </div>
+            <div class="card-body">
+                <canvas id="buffaloStatusChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Alerts Widget -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                Alerts
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning" role="alert">
+                    No alerts at this time.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Sample charts for now - will be populated with real data later
+    document.addEventListener('DOMContentLoaded', function() {
+        // Milk Yield Chart
+        const milkYieldCtx = document.getElementById('milkYieldChart').getContext('2d');
+        const milkYieldChart = new Chart(milkYieldCtx, {
+            type: 'line',
+            data: {
+                labels: {{ milk_dates|safe|default:"[]" }},
+                datasets: [{
+                    label: 'Milk Yield (L)',
+                    data: {{ milk_values|safe|default:"[]" }},
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+
+        // Buffalo Status Chart
+        const statusCtx = document.getElementById('buffaloStatusChart').getContext('2d');
+        const statusChart = new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Milking', 'Dry', 'Pregnant', 'Other'],
+                datasets: [{
+                    data: [{{ milking_buffalo }}, {{ dry_buffalo }}, {{ pregnant_buffalo }}, {{ remaining_buffalo }}],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.5)',
+                        'rgba(255, 206, 86, 0.5)',
+                        'rgba(75, 192, 192, 0.5)',
+                        'rgba(153, 102, 255, 0.5)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+            }
+        });
+    });
+</script>
+{% endblock %}

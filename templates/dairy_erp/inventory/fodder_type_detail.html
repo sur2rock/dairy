@@ -1,0 +1,401 @@
+{% extends "layout.html" %}
+
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="row mb-2">
+    <div class="col-sm-6">
+        <h2>Fodder Type: {{ fodder_type.name }}</h2>
+    </div>
+    <div class="col-sm-6">
+        <div class="float-right">
+            <a href="{% url 'fodder_type_edit' fodder_type.id %}" class="btn btn-primary"><i class="fas fa-edit"></i> Edit</a>
+            <a href="{% url 'fodder_type_delete' fodder_type.id %}" class="btn btn-danger delete-btn"><i class="fas fa-trash"></i> Delete</a>
+            <a href="{% url 'fodder_type_list' %}" class="btn btn-secondary"><i class="fas fa-list"></i> Back to List</a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-info-circle"></i>
+        Fodder Type Details
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 150px;">Name</th>
+                            <td>{{ fodder_type.name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Description</th>
+                            <td>{{ fodder_type.description|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Category</th>
+                            <td>{{ fodder_type.get_category_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Dry Matter %</th>
+                            <td>{{ fodder_type.dry_matter_percentage|default:"N/A" }}%</td>
+                        </tr>
+                        <tr>
+                            <th>Protein %</th>
+                            <td>{{ fodder_type.protein_percentage|default:"N/A" }}%</td>
+                        </tr>
+                        <tr>
+                            <th>Energy (MJ/kg)</th>
+                            <td>{{ fodder_type.energy_content|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Fiber %</th>
+                            <td>{{ fodder_type.fiber_percentage|default:"N/A" }}%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 150px;">Cost per Unit</th>
+                            <td>{{ fodder_type.cost_per_unit|default:"N/A"|floatformat:2 }} {{ farm_settings.currency_symbol }}</td>
+                        </tr>
+                        <tr>
+                            <th>Unit of Measure</th>
+                            <td>{{ fodder_type.get_unit_of_measure_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Shelf Life (days)</th>
+                            <td>{{ fodder_type.shelf_life_days|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Storage Conditions</th>
+                            <td>{{ fodder_type.storage_conditions|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Supplier</th>
+                            <td>{{ fodder_type.supplier|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Created</th>
+                            <td>{{ fodder_type.created_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Updated</th>
+                            <td>{{ fodder_type.updated_at|date:"M d, Y H:i" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-chart-pie"></i>
+        Nutritional Composition
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <canvas id="nutritionChart" width="400" height="300"></canvas>
+            </div>
+            <div class="col-md-6">
+                <div class="alert alert-info">
+                    <h5>Feeding Recommendations</h5>
+                    <p>{{ fodder_type.feeding_recommendations|default:"No specific feeding recommendations available." }}</p>
+                </div>
+                <div class="alert alert-warning">
+                    <h5>Notes & Precautions</h5>
+                    <p>{{ fodder_type.notes|default:"No specific notes or precautions available." }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-boxes"></i>
+        Current Inventory Status
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tbody>
+                        <tr>
+                            <th style="width: 200px;">Current Stock</th>
+                            <td>{{ current_stock|default:0|floatformat:2 }} {{ fodder_type.get_unit_of_measure_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Reorder Level</th>
+                            <td>{{ fodder_type.reorder_level|default:"N/A" }} {{ fodder_type.get_unit_of_measure_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Ideal Stock Level</th>
+                            <td>{{ fodder_type.ideal_stock_level|default:"N/A" }} {{ fodder_type.get_unit_of_measure_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status</th>
+                            <td>
+                                {% if current_stock < fodder_type.reorder_level %}
+                                    <span class="badge badge-danger">Below Reorder Level</span>
+                                {% elif current_stock < fodder_type.ideal_stock_level %}
+                                    <span class="badge badge-warning">Below Ideal Level</span>
+                                {% else %}
+                                    <span class="badge badge-success">Sufficient Stock</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Estimated Value</th>
+                            <td>{{ current_stock|default:0|floatformat:2|multiply:fodder_type.cost_per_unit|floatformat:2 }} {{ farm_settings.currency_symbol }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <canvas id="stockHistoryChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="btn-group">
+                    <a href="{% url 'inventory_transaction_create' %}?fodder_type={{ fodder_type.id }}&transaction_type=purchase" class="btn btn-success"><i class="fas fa-plus"></i> Record Purchase</a>
+                    <a href="{% url 'inventory_transaction_create' %}?fodder_type={{ fodder_type.id }}&transaction_type=consumption" class="btn btn-warning"><i class="fas fa-minus"></i> Record Consumption</a>
+                    <a href="{% url 'inventory_transaction_create' %}?fodder_type={{ fodder_type.id }}&transaction_type=adjustment" class="btn btn-info"><i class="fas fa-balance-scale"></i> Record Adjustment</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-history"></i>
+        Recent Transactions
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="transactionsTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Remaining Stock</th>
+                        <th>Cost</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in recent_transactions %}
+                    <tr>
+                        <td>{{ transaction.transaction_date|date:"M d, Y" }}</td>
+                        <td>
+                            {% if transaction.transaction_type == 'purchase' %}
+                                <span class="badge badge-success">Purchase</span>
+                            {% elif transaction.transaction_type == 'consumption' %}
+                                <span class="badge badge-warning">Consumption</span>
+                            {% elif transaction.transaction_type == 'adjustment' %}
+                                <span class="badge badge-info">Adjustment</span>
+                            {% else %}
+                                <span class="badge badge-secondary">{{ transaction.transaction_type|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if transaction.transaction_type == 'consumption' %}
+                                -{{ transaction.quantity|floatformat:2 }}
+                            {% else %}
+                                {{ transaction.quantity|floatformat:2 }}
+                            {% endif %}
+                            {{ fodder_type.get_unit_of_measure_display }}
+                        </td>
+                        <td>{{ transaction.remaining_stock|floatformat:2 }} {{ fodder_type.get_unit_of_measure_display }}</td>
+                        <td>
+                            {% if transaction.transaction_type == 'purchase' %}
+                                {{ transaction.cost|floatformat:2 }} {{ farm_settings.currency_symbol }}
+                            {% elif transaction.cost %}
+                                {{ transaction.cost|floatformat:2 }} {{ farm_settings.currency_symbol }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ transaction.notes|truncatewords:10|default:"" }}</td>
+                        <td>
+                            <a href="{% url 'inventory_transaction_detail' transaction.id %}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No transactions found for this fodder type.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-3">
+            <a href="{% url 'inventory_transaction_list' %}?fodder_type={{ fodder_type.id }}" class="btn btn-primary">View All Transactions</a>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the fodder type "<strong>{{ fodder_type.name }}</strong>"?</p>
+                <p class="text-danger">This action cannot be undone. All related inventory transactions will remain but will be marked as orphaned.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <a href="{% url 'fodder_type_delete' fodder_type.id %}?confirm=yes" class="btn btn-danger">Delete</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize DataTable for transactions
+    $('#transactionsTable').DataTable({
+        order: [[0, 'desc']],
+        pageLength: 5,
+        lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "All"]],
+        language: {
+            searchPlaceholder: "Search transactions"
+        }
+    });
+
+    // Handle delete button
+    $('.delete-btn').click(function(e) {
+        e.preventDefault();
+        $('#deleteModal').modal('show');
+    });
+
+    // Nutrition Chart
+    var ctx = document.getElementById('nutritionChart').getContext('2d');
+    var nutritionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Dry Matter', 'Protein', 'Fiber', 'Other Nutrients'],
+            datasets: [{
+                label: 'Nutritional Composition',
+                data: [
+                    {{ fodder_type.dry_matter_percentage|default:0 }},
+                    {{ fodder_type.protein_percentage|default:0 }},
+                    {{ fodder_type.fiber_percentage|default:0 }},
+                    {{ 100|subtract:fodder_type.dry_matter_percentage|subtract:fodder_type.protein_percentage|subtract:fodder_type.fiber_percentage|default:0 }}
+                ],
+                backgroundColor: [
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            title: {
+                display: true,
+                text: 'Nutritional Composition'
+            },
+            legend: {
+                position: 'right'
+            }
+        }
+    });
+
+    // Stock History Chart
+    var stockCtx = document.getElementById('stockHistoryChart').getContext('2d');
+    var stockHistoryChart = new Chart(stockCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for item in stock_history %}'{{ item.date|date:"M d" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Stock Level',
+                data: [{% for item in stock_history %}{{ item.stock_level|floatformat:2 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(75, 192, 192, 1)',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            title: {
+                display: true,
+                text: 'Stock Level History (Last 30 Days)'
+            },
+            scales: {
+                xAxes: [{
+                    gridLines: {
+                        display: false
+                    }
+                }],
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true
+                    },
+                    scaleLabel: {
+                        display: true,
+                        labelString: '{{ fodder_type.get_unit_of_measure_display }}'
+                    }
+                }]
+            },
+            elements: {
+                line: {
+                    tension: 0.4
+                }
+            },
+            tooltips: {
+                callbacks: {
+                    label: function(tooltipItem, data) {
+                        var label = data.datasets[tooltipItem.datasetIndex].label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        label += tooltipItem.yLabel.toFixed(2) + ' {{ fodder_type.get_unit_of_measure_display }}';
+                        return label;
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

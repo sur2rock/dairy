@@ -1,0 +1,338 @@
+{% extends 'dairy_erp/base.html' %}
+
+{% block title %}Buffalo: {{ buffalo }}{% endblock %}
+
+{% block header %}Buffalo Details: {{ buffalo }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Basic Information</h5>
+                <div>
+                    <a href="{% url 'herd:buffalo_edit' buffalo_id=buffalo.id %}" class="btn btn-warning btn-sm">Edit</a>
+                    <a href="{% url 'herd:buffalo_delete' buffalo_id=buffalo.id %}" class="btn btn-danger btn-sm">Remove</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Left column - Basic info and image -->
+                    <div class="col-md-6">
+                        <table class="table">
+                            <tr>
+                                <th style="width: 40%">ID Number:</th>
+                                <td>{{ buffalo.buffalo_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>Name:</th>
+                                <td>{{ buffalo.name|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Status:</th>
+                                <td>
+                                    {% if buffalo.status == 'MILKING' %}
+                                        <span class="badge bg-success">{{ buffalo.get_status_display }}</span>
+                                    {% elif buffalo.status == 'PREGNANT' %}
+                                        <span class="badge bg-primary">{{ buffalo.get_status_display }}</span>
+                                    {% elif buffalo.status == 'DRY' %}
+                                        <span class="badge bg-warning text-dark">{{ buffalo.get_status_display }}</span>
+                                    {% elif buffalo.status == 'SOLD' or buffalo.status == 'DECEASED' %}
+                                        <span class="badge bg-danger">{{ buffalo.get_status_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ buffalo.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Breed:</th>
+                                <td>{{ buffalo.breed.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Gender:</th>
+                                <td>{{ buffalo.get_gender_display }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date of Birth:</th>
+                                <td>{{ buffalo.date_of_birth }}</td>
+                            </tr>
+                            <tr>
+                                <th>Age:</th>
+                                <td>{{ buffalo.age }}</td>
+                            </tr>
+                            <tr>
+                                <th>Location:</th>
+                                <td>{{ buffalo.current_location }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Right column - More details -->
+                    <div class="col-md-6">
+                        <table class="table">
+                            {% if buffalo.purchase_date %}
+                            <tr>
+                                <th style="width: 40%">Purchase Date:</th>
+                                <td>{{ buffalo.purchase_date }}</td>
+                            </tr>
+                            <tr>
+                                <th>Purchase Price:</th>
+                                <td>{{ buffalo.purchase_price }}</td>
+                            </tr>
+                            {% endif %}
+                            
+                            {% if buffalo.gender == 'FEMALE' %}
+                            <tr>
+                                <th>Lactation Number:</th>
+                                <td>{{ buffalo.lactation_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>Last Calved:</th>
+                                <td>{{ buffalo.date_last_calved|default:"-" }}</td>
+                            </tr>
+                            {% if buffalo.status == 'MILKING' %}
+                            <tr>
+                                <th>Expected Dry Off:</th>
+                                <td>{{ buffalo.expected_dry_off_date|default:"-" }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if buffalo.status == 'PREGNANT' %}
+                            <tr>
+                                <th>Due Date:</th>
+                                <td>{{ buffalo.date_due }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endif %}
+                            
+                            <tr>
+                                <th>Dam:</th>
+                                <td>
+                                    {% if buffalo.dam %}
+                                        <a href="{% url 'herd:buffalo_detail' buffalo_id=buffalo.dam.id %}">{{ buffalo.dam }}</a>
+                                    {% else %}
+                                        Unknown
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Sire:</th>
+                                <td>
+                                    {% if buffalo.sire %}
+                                        <a href="{% url 'herd:buffalo_detail' buffalo_id=buffalo.sire.id %}">{{ buffalo.sire }}</a>
+                                    {% else %}
+                                        Unknown
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Cumulative Cost:</th>
+                                <td>{{ buffalo.cumulative_cost }}</td>
+                            </tr>
+                            <tr>
+                                <th>Notes:</th>
+                                <td>{{ buffalo.notes|default:"-"|linebreaks }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Custom fields section -->
+                {% if buffalo.custom_data %}
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <h6>Custom Fields</h6>
+                        <table class="table">
+                            {% for key, value in buffalo.custom_data.items %}
+                            <tr>
+                                <th style="width: 40%">{{ key }}</th>
+                                <td>{{ value }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Lifecycle Events section -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Lifecycle Events</h5>
+                <a href="{% url 'herd:lifecycle_event_add' %}?buffalo_id={{ buffalo.id }}" class="btn btn-primary btn-sm">Add Event</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Event</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in lifecycle_events %}
+                            <tr>
+                                <td>{{ event.event_date }}</td>
+                                <td>
+                                    {% if event.event_type == 'CALVING' %}
+                                        <span class="badge bg-success">{{ event.get_event_type_display }}</span>
+                                    {% elif event.event_type == 'BRED' or event.event_type == 'PREG_CONFIRMED' %}
+                                        <span class="badge bg-primary">{{ event.get_event_type_display }}</span>
+                                    {% elif event.event_type == 'DRYOFF' %}
+                                        <span class="badge bg-warning text-dark">{{ event.get_event_type_display }}</span>
+                                    {% elif event.event_type == 'SALE' or event.event_type == 'DEATH' %}
+                                        <span class="badge bg-danger">{{ event.get_event_type_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ event.get_event_type_display }}</span>
+                                    {% endif %}
+                                    {% if event.related_calf %}
+                                        <a href="{% url 'herd:buffalo_detail' buffalo_id=event.related_calf.id %}">
+                                            ({{ event.related_calf }})
+                                        </a>
+                                    {% endif %}
+                                </td>
+                                <td>{{ event.notes|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">No lifecycle events recorded.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Milk Production section (only for milking buffalo) -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Milk Production</h5>
+                {% if buffalo.status == 'MILKING' %}
+                <a href="{% url 'herd:milk_production_add' %}?buffalo_id={{ buffalo.id }}" class="btn btn-primary btn-sm">Add Record</a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if buffalo.status == 'MILKING' %}
+                    <!-- Milk stats -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6>Total (Last 30 Days)</h6>
+                                    <h3>{{ total_milk|floatformat:2 }} L</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6>Daily Average</h6>
+                                    <h3>{{ avg_milk_per_day|floatformat:2 }} L</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Milk production chart -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <canvas id="milkProductionChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Milk production table -->
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Quantity (L)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in milk_records %}
+                                <tr>
+                                    <td>{{ record.date }}</td>
+                                    <td>{{ record.get_time_of_day_display }}</td>
+                                    <td>{{ record.quantity_litres }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No milk production records found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        This buffalo is not currently in milking status.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if buffalo.status == 'MILKING' and chart_dates %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Milk production chart
+        const milkProductionCtx = document.getElementById('milkProductionChart').getContext('2d');
+        const milkProductionChart = new Chart(milkProductionCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ chart_dates|safe }},
+                datasets: [
+                    {
+                        label: 'Morning (L)',
+                        data: {{ chart_am_data|safe }},
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Evening (L)',
+                        data: {{ chart_pm_data|safe }},
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Litres'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}

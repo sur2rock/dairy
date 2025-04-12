@@ -1,0 +1,357 @@
+{% extends "layout.html" %}
+
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row mb-2">
+    <div class="col-sm-6">
+        <h2>{% if transaction %}Edit Inventory Transaction{% else %}New Inventory Transaction{% endif %}</h2>
+    </div>
+    <div class="col-sm-6">
+        <div class="float-right">
+            <a href="{% url 'inventory_transaction_list' %}" class="btn btn-secondary"><i class="fas fa-list"></i> Back to List</a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-edit"></i>
+        {% if transaction %}Edit Transaction Details{% else %}Enter Transaction Details{% endif %}
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" id="transactionForm" novalidate>
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <div class="col-md-4 mb-3">
+                    {{ form.transaction_type|as_crispy_field }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    {{ form.transaction_date|as_crispy_field }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    {{ form.fodder_type|as_crispy_field }}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="col-md-4 mb-3">
+                    {{ form.quantity|as_crispy_field }}
+                </div>
+                <div class="col-md-4 mb-3 cost-field">
+                    {{ form.cost|as_crispy_field }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    {{ form.reference_number|as_crispy_field }}
+                </div>
+            </div>
+            
+            <!-- Purchase-specific fields -->
+            <div id="purchase-fields" class="transaction-specific-fields" style="display: none;">
+                <h5 class="mt-3 mb-3 border-bottom pb-2">Purchase Details</h5>
+                <div class="form-row">
+                    <div class="col-md-4 mb-3">
+                        {{ form.supplier|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.supplier_name|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.invoice_number|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col-md-4 mb-3">
+                        {{ form.payment_status|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.delivery_date|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.expiry_date|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col-md-12 mb-3">
+                        {{ form.quality_report|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Consumption-specific fields -->
+            <div id="consumption-fields" class="transaction-specific-fields" style="display: none;">
+                <h5 class="mt-3 mb-3 border-bottom pb-2">Consumption Details</h5>
+                <div class="form-row">
+                    <div class="col-md-4 mb-3">
+                        {{ form.animal_group|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.animal_group_name|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        {{ form.consumption_purpose|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col-md-4 mb-3">
+                        {{ form.feeding_schedule|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Transfer-specific fields -->
+            <div id="transfer-fields" class="transaction-specific-fields" style="display: none;">
+                <h5 class="mt-3 mb-3 border-bottom pb-2">Transfer Details</h5>
+                <div class="form-row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.source_location|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.destination_location|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notes field for all transaction types -->
+            <div class="form-row mt-3">
+                <div class="col-md-12">
+                    {{ form.notes|as_crispy_field }}
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-3" id="stock-impact-message">
+                <i class="fas fa-info-circle"></i> Please select a transaction type and fodder type to see stock impact.
+            </div>
+            
+            <div class="alert alert-warning mt-3" id="validation-message" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> <span id="validation-text"></span>
+            </div>
+            
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Transaction</button>
+                <a href="{% url 'inventory_transaction_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Set up date pickers
+    $('.datepicker').datepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        todayHighlight: true
+    });
+    
+    // Handle transaction type changes
+    $('#id_transaction_type').change(function() {
+        var transactionType = $(this).val();
+        
+        // Hide all specific fields first
+        $('.transaction-specific-fields').hide();
+        
+        // Show relevant fields based on transaction type
+        if (transactionType === 'purchase') {
+            $('#purchase-fields').show();
+            $('.cost-field').show();
+            $('#id_cost').prop('required', true);
+        } else if (transactionType === 'consumption') {
+            $('#consumption-fields').show();
+            $('.cost-field').hide();
+            $('#id_cost').prop('required', false);
+        } else if (transactionType === 'transfer') {
+            $('#transfer-fields').show();
+            $('.cost-field').hide();
+            $('#id_cost').prop('required', false);
+        } else if (transactionType === 'adjustment') {
+            $('.cost-field').hide();
+            $('#id_cost').prop('required', false);
+        }
+        
+        updateStockImpactMessage();
+    });
+    
+    // Trigger change event on page load to set up the form correctly
+    $('#id_transaction_type').trigger('change');
+    
+    // Fodder type change handler
+    $('#id_fodder_type').change(function() {
+        updateStockImpactMessage();
+        
+        // If a fodder type is selected and it's a purchase, calculate and suggest cost
+        var fodderTypeId = $(this).val();
+        var transactionType = $('#id_transaction_type').val();
+        var quantity = $('#id_quantity').val();
+        
+        if (fodderTypeId && transactionType === 'purchase' && quantity) {
+            $.ajax({
+                url: '{% url "api_fodder_type_info" %}',
+                data: { id: fodderTypeId },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.cost_per_unit) {
+                        var suggestedCost = data.cost_per_unit * quantity;
+                        $('#id_cost').val(suggestedCost.toFixed(2));
+                    }
+                }
+            });
+        }
+    });
+    
+    // Quantity change handler
+    $('#id_quantity').on('input', function() {
+        updateStockImpactMessage();
+        
+        // If it's a purchase with fodder type selected, recalculate suggested cost
+        var transactionType = $('#id_transaction_type').val();
+        var fodderTypeId = $('#id_fodder_type').val();
+        var quantity = $(this).val();
+        
+        if (transactionType === 'purchase' && fodderTypeId && quantity) {
+            $.ajax({
+                url: '{% url "api_fodder_type_info" %}',
+                data: { id: fodderTypeId },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.cost_per_unit) {
+                        var suggestedCost = data.cost_per_unit * quantity;
+                        $('#id_cost').val(suggestedCost.toFixed(2));
+                    }
+                }
+            });
+        }
+    });
+    
+    // Function to update stock impact message
+    function updateStockImpactMessage() {
+        var transactionType = $('#id_transaction_type').val();
+        var fodderTypeId = $('#id_fodder_type').val();
+        var quantity = $('#id_quantity').val();
+        
+        if (!transactionType || !fodderTypeId) {
+            $('#stock-impact-message').html('<i class="fas fa-info-circle"></i> Please select a transaction type and fodder type to see stock impact.');
+            return;
+        }
+        
+        if (!quantity || isNaN(quantity) || quantity <= 0) {
+            $('#stock-impact-message').html('<i class="fas fa-info-circle"></i> Please enter a valid quantity to see stock impact.');
+            return;
+        }
+        
+        // Make AJAX call to get current stock level
+        $.ajax({
+            url: '{% url "api_current_stock" %}',
+            data: { fodder_type_id: fodderTypeId },
+            dataType: 'json',
+            success: function(data) {
+                var currentStock = data.current_stock;
+                var unitOfMeasure = data.unit_of_measure;
+                var message = '';
+                var messageType = 'info';
+                
+                if (transactionType === 'purchase') {
+                    var newStock = parseFloat(currentStock) + parseFloat(quantity);
+                    message = '<i class="fas fa-plus-circle text-success"></i> This purchase will <strong>increase</strong> your inventory by ' + parseFloat(quantity).toFixed(2) + ' ' + unitOfMeasure + '. New stock level will be ' + newStock.toFixed(2) + ' ' + unitOfMeasure + '.';
+                } else if (transactionType === 'consumption') {
+                    var newStock = parseFloat(currentStock) - parseFloat(quantity);
+                    message = '<i class="fas fa-minus-circle text-warning"></i> This consumption will <strong>decrease</strong> your inventory by ' + parseFloat(quantity).toFixed(2) + ' ' + unitOfMeasure + '. New stock level will be ' + newStock.toFixed(2) + ' ' + unitOfMeasure + '.';
+                    
+                    if (newStock < 0) {
+                        $('#validation-message').show();
+                        $('#validation-text').text('Warning: This transaction will result in negative inventory. Current stock is ' + currentStock + ' ' + unitOfMeasure + '.');
+                        messageType = 'danger';
+                    } else {
+                        $('#validation-message').hide();
+                    }
+                } else if (transactionType === 'adjustment') {
+                    var newStock = parseFloat(currentStock) + parseFloat(quantity);
+                    if (quantity > 0) {
+                        message = '<i class="fas fa-arrow-up text-primary"></i> This positive adjustment will <strong>increase</strong> your inventory by ' + parseFloat(quantity).toFixed(2) + ' ' + unitOfMeasure + '. New stock level will be ' + newStock.toFixed(2) + ' ' + unitOfMeasure + '.';
+                    } else {
+                        message = '<i class="fas fa-arrow-down text-danger"></i> This negative adjustment will <strong>decrease</strong> your inventory by ' + Math.abs(parseFloat(quantity)).toFixed(2) + ' ' + unitOfMeasure + '. New stock level will be ' + newStock.toFixed(2) + ' ' + unitOfMeasure + '.';
+                        
+                        if (newStock < 0) {
+                            $('#validation-message').show();
+                            $('#validation-text').text('Warning: This transaction will result in negative inventory. Current stock is ' + currentStock + ' ' + unitOfMeasure + '.');
+                            messageType = 'danger';
+                        } else {
+                            $('#validation-message').hide();
+                        }
+                    }
+                } else if (transactionType === 'transfer') {
+                    var newStock = parseFloat(currentStock) - parseFloat(quantity);
+                    message = '<i class="fas fa-exchange-alt text-info"></i> This transfer will move ' + parseFloat(quantity).toFixed(2) + ' ' + unitOfMeasure + ' from the current location. New stock level will be ' + newStock.toFixed(2) + ' ' + unitOfMeasure + '.';
+                    
+                    if (newStock < 0) {
+                        $('#validation-message').show();
+                        $('#validation-text').text('Warning: This transaction will result in negative inventory. Current stock is ' + currentStock + ' ' + unitOfMeasure + '.');
+                        messageType = 'danger';
+                    } else {
+                        $('#validation-message').hide();
+                    }
+                }
+                
+                $('#stock-impact-message').removeClass('alert-info alert-warning alert-danger').addClass('alert-' + messageType).html(message);
+            }
+        });
+    }
+    
+    // Toggle supplier fields based on selection
+    $('#id_supplier').change(function() {
+        if ($(this).val() === '') {
+            $('#id_supplier_name').closest('.form-group').show();
+        } else {
+            $('#id_supplier_name').closest('.form-group').hide();
+        }
+    });
+    
+    // Toggle animal group fields based on selection
+    $('#id_animal_group').change(function() {
+        if ($(this).val() === '') {
+            $('#id_animal_group_name').closest('.form-group').show();
+        } else {
+            $('#id_animal_group_name').closest('.form-group').hide();
+        }
+    });
+    
+    // Trigger supplier/animal group field toggles on page load
+    $('#id_supplier').trigger('change');
+    $('#id_animal_group').trigger('change');
+    
+    // Form submission validation
+    $('#transactionForm').submit(function(e) {
+        var transactionType = $('#id_transaction_type').val();
+        var quantity = $('#id_quantity').val();
+        var fodderTypeId = $('#id_fodder_type').val();
+        
+        if (!transactionType || !quantity || !fodderTypeId) {
+            return true; // Let Django form validation handle this
+        }
+        
+        // For consumption and transfer, check if there's enough stock
+        if ((transactionType === 'consumption' || transactionType === 'transfer') && fodderTypeId) {
+            $.ajax({
+                url: '{% url "api_current_stock" %}',
+                data: { fodder_type_id: fodderTypeId },
+                dataType: 'json',
+                async: false, // Make this synchronous for form validation
+                success: function(data) {
+                    var currentStock = parseFloat(data.current_stock);
+                    var requestedQuantity = parseFloat(quantity);
+                    
+                    if (requestedQuantity > currentStock) {
+                        e.preventDefault();
+                        alert('Error: Not enough stock available. Current stock: ' + currentStock + ' ' + data.unit_of_measure);
+                    }
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
